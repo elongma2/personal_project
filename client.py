@@ -7,6 +7,7 @@ from game.remote_controller import LocalKBM
 def main():
     pygame.init()
     screen = pygame.display.set_mode((1280,720))
+    clock = pygame.time.Clock()
     screen_rect = screen.get_rect()
     game_world = world(screen_rect)
     client_id = None
@@ -16,7 +17,9 @@ def main():
     client.connect()
 
     running = True
+    controller = LocalKBM()
     while running:
+        frame_dt = clock.tick(60) / 1000.0
         now = pygame.time.get_ticks()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -31,7 +34,7 @@ def main():
         
         #read and send input
         if client_id is not None:
-            input = collect_local_inputs(LocalKBM())
+            input = collect_local_inputs(controller)
             client.send_line({"type":"input",
                               "id":client_id,
                               "fwd" : input["fwd"],
@@ -41,6 +44,9 @@ def main():
                               "fire" : input["fire"],
                               "aim" : input.get("aim",None)
                             })
+            client.flush()
+        if game_world.phase == "GAMEOVER":
+            running = False
         draw(screen,game_world,now)
     client.close()
     pygame.quit()

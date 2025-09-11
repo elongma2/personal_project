@@ -1,6 +1,5 @@
 import pygame
 import random
-
 from game.worlds import world
 from game.tank import Tank
 from game.asteroids import spawn_asteroid,Asteroid
@@ -76,11 +75,16 @@ def main():
         
         #4 send snapshot to clients
         snap_accum += frame_dt
-        if snap_accum >= 0.08:
-            snap_accum -= 0.08
+        if snap_accum >= 0.033:
+            snap_accum -= 0.033
             snap = build_snapshot(game_world,now,tick)
             #send snap to all clients
             server.broadcast(snap)
+            server.flush_bytes()
+        
+        if game_world.phase == "GAMEOVER":
+            running = False
+            
     server.close()
     print("Server shut down")
 

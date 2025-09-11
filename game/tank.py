@@ -6,8 +6,6 @@ class Tank(pygame.sprite.Sprite):
     def __init__(self,x,y,image_path_tank_base, image_path_tank_turret,tank_id,life =2,headless = False):
         # Call the parent class (Sprite) constructor
         super().__init__()
-
-        super().__init__()
         self.has_image = not headless
         self.tank_id = tank_id
 
@@ -30,7 +28,7 @@ class Tank(pygame.sprite.Sprite):
         # --- RENDER (client only) ---
         if self.has_image:
             base = pygame.image.load(image_path_tank_base).convert_alpha()
-            self.body_base = pygame.transform.scale(base, (50,50))
+            self.body_base = pygame.transform.scale(base, (100,100))
             self.original_image = self.body_base
 
             turret = pygame.image.load(image_path_tank_turret).convert_alpha()

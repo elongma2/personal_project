@@ -8,6 +8,7 @@ class clientSocket:
         self.socket = None
         self.closed = False
         self._rx = b""
+        self._tx = bytearray()
 
     def connect(self):
         # Try once; if it fails, leave socket=None and closed=True so caller can handle it
@@ -30,8 +31,21 @@ class clientSocket:
         if not self.is_connected():
             return
         try:
-            self.socket.sendall((json.dumps(obj) + "\n").encode("utf-8"))
+            self._tx += (json.dumps(obj) + "\n").encode("utf-8")
         except socket.error as e:
+            print(f"Enqueue error: {e}")
+            self.closed = True
+    
+    def flush(self):    
+        if not self.is_connected():
+            return
+        try:
+            send = self.socket.send(self._tx)
+            if send > 0:
+                del self._tx[:send]
+        except (InterruptedError,BlockingIOError) as e: 
+            pass
+        except OSError as e:
             print(f"Error sending: {e}")
             self.closed = True
 

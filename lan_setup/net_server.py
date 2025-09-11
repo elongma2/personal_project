@@ -8,12 +8,13 @@ class serverSocket():
         self.listen_socket = None
         self.clients = set()
         self.rx = {}
+        self.tx = {}
 
     def listen(self):
         self.listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.listen_socket.setblocking(False)
         self.listen_socket.bind((self.bind_ip, self.port))
-        self.listen_socket.listen(5)
+        self.listen_socket.listen(64)
         print(f"Listening on {self.port}:{self.bind_ip}")
         return self.listen_socket
     
@@ -26,19 +27,40 @@ class serverSocket():
                 conn.setblocking(False)
                 self.clients.add(conn)
                 self.rx[conn] = b""
+                self.tx[conn] = bytearray() #array of bytes
                 new.append((conn,address))
                 print(f"Accepted connection from {address}")
             except BlockingIOError:
                 break
         return new
         
-    def send_line(self,sock,obj:dict) -> json:
-        json_string = json.dumps(obj) + "\n"
+    def send_line(self,sock,obj:dict) -> None:
         try:
-            sock.sendall(json_string.encode('utf-8'))
+            line = (json.dumps(obj) + "\n").encode('utf-8')
+            self.tx[sock] += line
         except BlockingIOError as e:
             print(f"Error sending inputs: {e}")
             self.drop(sock)
+    
+     # --- try to flush pending bytes for all clients ---
+    def flush_bytes(self):
+        dead = []
+        for client in list(self.clients):
+            buffer = self.tx[client]
+            if not buffer: continue
+            try:
+                send = client.send(buffer) #send return number of bytes sent
+                if send > 0:
+                    del buffer[:send]
+                else:
+                    pass
+            except (InterruptedError,BlockingIOError) as e:
+                continue
+            except OSError as e:
+                print(f"Error sending inputs: {e}")
+                dead.append(client)
+        for client in dead:
+            self.drop(client)
 
     def broadcast(self,obj:dict) -> None:
         dead = []
@@ -76,6 +98,8 @@ class serverSocket():
                 self.clients.remove(socket)
             if socket in self.rx:
                 del self.rx[socket]
+            if socket in self.tx:
+                del self.tx[socket]
             socket.close()
         except socket.error as e:
             print(f"Error closing socket: {e}")

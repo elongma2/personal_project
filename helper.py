@@ -1,11 +1,12 @@
 import pygame
+import random
 from game.remote_controller import LocalKBM
 from game.worlds import world
 from game.tank import Tank
 from game.asteroids import spawn_asteroid,Asteroid
 from game.bullets import Bullet
 
-""" pygame.init()
+pygame.init()
 screen = pygame.display.set_mode((1280,720))
 clock = pygame.time.Clock()
 screen_rect = screen.get_rect()
@@ -14,7 +15,7 @@ game_world.tank[1] = Tank(640,340,"assets/tank_body.png","assets/tank_turret.png
 game_world.tank[2] = Tank(300,300,"assets/tank_body.png","assets/tank_turret.png",tank_id = 2)
 ZERO_INPUTS = {"fwd":0,"bwd":0,"left":0,"right":0,"fire":0,"aim":None}
 controller_1 = LocalKBM()
-game_world.asteroids = [spawn_asteroid(screen_rect,pygame.math.Vector2(game_world.tank[1].rect.center),100,random.choice(["L","M","S"])) for _ in range(5)] """
+game_world.asteroids = [spawn_asteroid(screen_rect,pygame.math.Vector2(game_world.tank[1].rect.center),100,random.choice(["L","M","S"])) for _ in range(0)] 
 
 def collect_local_inputs(controller) -> dict:
     c = controller.read()
@@ -28,35 +29,46 @@ def collect_local_inputs(controller) -> dict:
     }
 
 def simulate(dt: float, inputs_by_id: dict, now_ms: int, game_world: world) -> None:
+
+    if getattr(game_world,"phase","") == "GAMEOVER":
+        return
+
     # A) Update my tank from inputs
     for tid,tank in game_world.tank.items():
         inp = inputs_by_id[tid]
-        tank.update(inp)
+        if not inp:
+            continue
+        tank.update(inp)    
 
         # Fire (spawn bullets)
         if inp["fire"] and inp["aim"] is not None:
             tank.fire(game_world.bullets,now_ms,inp["aim"])
 
-        # B) Update asteroids + check player-asteroid collision
-        for a in game_world.asteroids:
-            for tid,tank in game_world.tank.items():
-                if tank.collision_check(a):
-                    game_world.phase = "GAMEOVER"
-                    game_world.winner_id = None
-                    break
-            a.update(dt,game_world.screen_rect)
+    # B) Update asteroids + check player-asteroid collision
+    for a in game_world.asteroids:
+        a.update(dt,game_world.screen_rect)
+
+    for a in game_world.asteroids:
+        for tid,tank in game_world.tank.items():
+            if tank.collision_check(a):
+                game_world.phase = "GAMEOVER"
+                game_world.winner_id = None
+                return
+            
         
     # C) Update bullets & collisions
     remaining_bullets = [] #reset for next frame
-    new_asteroids = []
+    asteroids_to_add = []
+    asteroids_to_remove = []
 
     for bullet in game_world.bullets:
         hit = False
         # C1: bullet vs asteroids
+        # use different list for safe list mutation as we should not touch the original list while its being iterated
         for a in game_world.asteroids:
             if a.bullet_collide(bullet):
-                game_world.asteroids.remove(a)
-                new_asteroids.extend(a.split())
+                asteroids_to_remove.append(a)
+                asteroids_to_add.extend(a.split())
                 hit = True
                 break
 
@@ -73,6 +85,7 @@ def simulate(dt: float, inputs_by_id: dict, now_ms: int, game_world: world) -> N
                         if t.hp <= 0 and not t.try_respawn(now_ms):
                             game_world.phase = "GAMEOVER"
                             game_world.winner_id = bullet.owner_id
+                            return
                 # pass-through on invuln: do nothing (keep bullet alive)
 
         # C3: advance bullet if still alive
@@ -80,7 +93,8 @@ def simulate(dt: float, inputs_by_id: dict, now_ms: int, game_world: world) -> N
             remaining_bullets.append(bullet)
 
     game_world.bullets = remaining_bullets
-    game_world.asteroids.extend(new_asteroids)
+    game_world.asteroids = [a for a in game_world.asteroids if a not in asteroids_to_remove]
+    game_world.asteroids.extend(asteroids_to_add)
 
 def draw(screen, game_world: world, now_ms: int) -> None:
     screen.fill("black")
@@ -137,7 +151,9 @@ def build_snapshot(game_world: world, now_ms: int,tick:int) -> dict:
         "now_ms":now_ms,
         "tanks":tanks,
         "bullets":bullets,
-        "asteroids":asteroids
+        "asteroids":asteroids,
+        "phase":getattr(game_world,"phase","playing"),
+        "winner_id":getattr(game_world,"winner_id",None),
     }
 
 def apply_state(game_world:world, state:dict):
@@ -148,13 +164,13 @@ def apply_state(game_world:world, state:dict):
                 0,0,"assets/tank_body.png","assets/tank_turret.png",tank_id=tid,headless=False
             )
         t = game_world.tank[tid]
-        t.x = tdata["x"]
-        t.y = tdata["y"]
-        t.body_angle = tdata["body_angle"]
-        t.turret_angle = tdata["turret_angle"]
-        t.hp = tdata["hp"]
-        t.life = tdata["lives"]
-        t.invuln_until = tdata["invuln"]
+        t.x = tdata.get("x")
+        t.y = tdata.get("y")
+        t.body_angle = tdata.get("body_angle")
+        t.turret_angle = tdata.get("turret_angle")
+        t.hp = tdata.get("hp")
+        t.life = tdata.get("lives")
+        t.invuln_until = tdata.get("invuln")
         t.rect.center = (t.x,t.y)
 
     new_bullets = []
@@ -175,8 +191,11 @@ def apply_state(game_world:world, state:dict):
         a = Asteroid.asteroid_snapshot(ast)
         new_asteroids.append(a)
     game_world.asteroids = new_asteroids
+
+    game_world.phase = state.get("phase","playing")
+    game_world.winner_id = state.get("winner_id",None)
     
-""" def main():
+def main():
     FIXED_DT = 1/60
     accumulated_dt = 0.0
     running = True
@@ -212,4 +231,4 @@ def apply_state(game_world:world, state:dict):
     pygame.quit()
 
 if __name__ == "__main__":
-    main() """
+    main()  
