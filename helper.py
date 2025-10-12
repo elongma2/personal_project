@@ -6,17 +6,6 @@ from game.tank import Tank
 from game.asteroids import spawn_asteroid,Asteroid
 from game.bullets import Bullet
 
-pygame.init()
-screen = pygame.display.set_mode((1280,720))
-clock = pygame.time.Clock()
-screen_rect = screen.get_rect()
-game_world = world(screen_rect)
-game_world.tank[1] = Tank(640,340,"assets/tank_body.png","assets/tank_turret.png",tank_id = 1)
-game_world.tank[2] = Tank(300,300,"assets/tank_body.png","assets/tank_turret.png",tank_id = 2)
-ZERO_INPUTS = {"fwd":0,"bwd":0,"left":0,"right":0,"fire":0,"aim":None}
-controller_1 = LocalKBM()
-game_world.asteroids = [spawn_asteroid(screen_rect,pygame.math.Vector2(game_world.tank[1].rect.center),100,random.choice(["L","M","S"])) for _ in range(3)] 
-
 def collect_local_inputs(controller) -> dict:
     c = controller.read()
     return {
@@ -348,41 +337,3 @@ def seg_circle_hit(A: pygame.math.Vector2, B: pygame.math.Vector2,
 
     hit = (Q-C).length_squared() < R*R
     return hit, t, Q
-
-def main():
-    FIXED_DT = 1/60
-    accumulated_dt = 0.0
-    running = True
-    while running:
-        frame_dt = clock.tick(60) / 1000.0
-        now = pygame.time.get_ticks()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-                break
-
-        inputs = collect_local_inputs(controller_1) # my inputs only
-        inputs_by_id = {
-            1:inputs,
-            2:ZERO_INPUTS
-        }
-        accumulated_dt += frame_dt
-
-        # clamp accum to avoid spiral-of-death on lag spikes
-        if accumulated_dt > 0.25: 
-            accumulated_dt = 0.25
-
-        while accumulated_dt >= FIXED_DT:
-            simulate(FIXED_DT, inputs_by_id, now, game_world)
-            draw(screen, game_world, now)
-            accumulated_dt -= FIXED_DT
-
-        if game_world.phase == "GAMEOVER":
-            running = False
-            print("Gameover")
-            print("Winner:", game_world.winner_id)
-        draw(screen, game_world, now)
-    pygame.quit()
-
-if __name__ == "__main__":
-    main()   
