@@ -3,6 +3,7 @@ import pygame
 import subprocess
 from client import render_client
 import time
+import socket
 
 def launch_server_subporcess():
     return subprocess.Popen([sys.executable, 'server.py'], stdout= sys.stdout, stderr=sys.stderr)
@@ -88,7 +89,8 @@ def main():
             server = launch_server_subporcess()
             time.sleep(0.3)
             try:
-                render_client(screen,"192.168.50.226",12345)
+                host = socket.gethostbyname(socket.gethostname())
+                render_client(screen,host,12345)
             finally:
                 server.terminate()
             
