@@ -1,7 +1,9 @@
 import pygame
 import math
+from itertools import count 
 from .bullets import Bullet
 
+bullet_id_update = count(1)
 class Tank(pygame.sprite.Sprite):
     def __init__(self,x,y,image_path_tank_base, image_path_tank_turret,tank_id,life =2,headless = False):
         # Call the parent class (Sprite) constructor
@@ -41,7 +43,7 @@ class Tank(pygame.sprite.Sprite):
             self.rect = pygame.Rect(x, y, 50, 50)
             self.hitbox = (self.rect.width // 2) * 0.85
 
-    def update(self,controls):
+    def update(self,controls,screen_rect):
         #1 handle movement
         if controls["fwd"]:
             self.speed = 2
@@ -63,6 +65,10 @@ class Tank(pygame.sprite.Sprite):
         vy = -self.speed * math.cos(radians)
         self.x += vx
         self.y += vy
+        #clamp to the screen_rect boundary
+        self.x = max(screen_rect.left,min(self.x,screen_rect.right))
+        self.y = max(screen_rect.top,min(self.y,screen_rect.bottom))
+
         self.rect.center = (self.x,self.y)
 
         if controls["aim"] is not None:
@@ -91,8 +97,9 @@ class Tank(pygame.sprite.Sprite):
         dir_v = pygame.math.Vector2(mouse_x - cx, mouse_y - cy)
         if dir_v == pygame.math.Vector2(0,0):
             return
-
-        bullet_group.append(Bullet((cx,cy),dir_v,owner_id = self.tank_id, safe_until_ms= now_ms + 120))
+        bullet = Bullet((cx,cy),dir_v,owner_id = self.tank_id, safe_until_ms= now_ms + 120)
+        bullet.id = next(bullet_id_update)
+        bullet_group.append(bullet)
         self.last_shot = now_ms
 
     def collision_check(self,a):
@@ -131,6 +138,7 @@ class Tank(pygame.sprite.Sprite):
     
     def apply_damage(self,dmg):
         self.hp -= dmg
+
     def try_respawn(self,now_ms,respawn_pos = (200,200)):
         if self.hp > 0:
             return True

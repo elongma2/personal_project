@@ -9,7 +9,6 @@ class clientSocket:
         self.closed = False
         self._rx = b""
         self._tx = bytearray()
-
     def connect(self):
         # Try once; if it fails, leave socket=None and closed=True so caller can handle it
         try:

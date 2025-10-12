@@ -1,12 +1,13 @@
 import pygame
 import random
+from itertools import count
 
 AST_TIERS = {
-    "L": {"r": 40,"speed":120,"kids": 2 ,"child":"M"},
-    "M": {"r": 20,"speed":170,"kids": 1,"child":"S"},
-    "S": {"r": 10,"speed":240,"kids": 0,"child":None}
-}
-
+    "L": {"r": 58,"speed":120,"kids": 2 ,"child":"M"},
+    "M": {"r": 36,"speed":170,"kids": 1,"child":"S"},
+    "S": {"r": 20,"speed":240,"kids": 0,"child":None}
+}   
+asteroid_id_update = count(1)
 
 class Asteroid():
     def __init__(self,pos,vel,tier):
@@ -14,8 +15,8 @@ class Asteroid():
         self.vel = pygame.math.Vector2(vel)
         self.tier = tier
         self.radius = AST_TIERS[tier]["r"]
+        self.id = None
 
-    
     def update(self,dt,bounds):
         self.pos += self.vel * dt
         # X walls
@@ -45,16 +46,16 @@ class Asteroid():
             dirv = pygame.math.Vector2(1,0).rotate(random.uniform(0,360))
             speed = AST_TIERS[child_tier]["speed"]
             spawn_pos = self.pos + dirv * 0.5 # give the spawn pos a little offset
-            children.append(Asteroid(spawn_pos, dirv * speed , child_tier))
+            ast = Asteroid(spawn_pos, dirv * speed , child_tier)
+            ast.id = next(asteroid_id_update)
+            children.append(ast)
         return children
-    
     
     def bullet_collide(self,bullet):
         return self.pos.distance_to(bullet.pos) <= self.radius + bullet.radius
     
     def draw(self,surface):
         pygame.draw.circle(surface,"white",(int(self.pos.x),int(self.pos.y)),self.radius)
-
 
     @classmethod
     def asteroid_snapshot(cls, ast:dict):
@@ -64,7 +65,6 @@ class Asteroid():
         obj.radius = ast["radius"]
         return obj
 
-    
 def spawn_asteroid(bounds,tank_pos,min_dist,tier):
     rad = AST_TIERS[tier]["r"]
     #find until it reaches the satisfied pos 
@@ -75,7 +75,6 @@ def spawn_asteroid(bounds,tank_pos,min_dist,tier):
         )
         if pos.distance_to(tank_pos) >= min_dist:
             break
-
     vel = pygame.math.Vector2(1,0).rotate(random.randint(0,360)) * AST_TIERS[tier]["speed"]
     return Asteroid(pos,vel,tier)
 

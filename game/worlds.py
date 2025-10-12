@@ -6,6 +6,8 @@ class world():
         self.tank: dict[int,Tank] = {}
         self.bullets: list[Bullet] = []
         self.asteroids: list[Asteroid] = []
+        self.asteroids_by_id = {}
+        self.bullets_by_id = {}
         self.screen_rect= screen_rect
-        self.phase= "Playing"
+        self.phase= "PLAYING"
         self.winner_id: int | None = None  

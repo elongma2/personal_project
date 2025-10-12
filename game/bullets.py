@@ -12,6 +12,7 @@ class Bullet:
         self.radius = BULLET_RADIUS
         self.owner_id = owner_id
         self.safe_until_ms = safe_until_ms
+        self.id = None
     
     def update(self,dt,screen_rect):
         self.pos += self.vel * dt

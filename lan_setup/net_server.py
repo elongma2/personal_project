@@ -9,13 +9,12 @@ class serverSocket():
         self.clients = set()
         self.rx = {}
         self.tx = {}
-
     def listen(self):
         self.listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.listen_socket.setblocking(False)
         self.listen_socket.bind((self.bind_ip, self.port))
         self.listen_socket.listen(64)
-        print(f"Listening on {self.port}:{self.bind_ip}")
+        print(f"Listening on {self.bind_ip}:{self.port}")
         return self.listen_socket
     
     def accept_new(self) -> list:
