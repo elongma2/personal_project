@@ -1,2 +1,2 @@
-./helper.py
 venv
+__pycache__/
