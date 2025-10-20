@@ -1,9 +1,8 @@
 import pygame
 import random
-from game.remote_controller import LocalKBM
 from game.worlds import world
 from game.tank import Tank
-from game.asteroids import spawn_asteroid,Asteroid
+from game.asteroids import Asteroid
 from game.bullets import Bullet
 
 def collect_local_inputs(controller) -> dict:
